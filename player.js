@@ -26,7 +26,12 @@
   setStatus('page chargée, attente API YouTube…');
 
   // ---------------------------------------------------------------- YouTube
+  let ytCreated = false;
   window.onYouTubeIframeAPIReady = function () {
+    if (ytCreated) return;
+    ytCreated = true;
+    setStatus('API YouTube chargée, création du lecteur…');
+    try {
     yt = new YT.Player('yt', {
       width: '100%', height: '100%',
       host: 'https://www.youtube.com',
@@ -57,7 +62,18 @@
         },
       },
     });
+    } catch (err) { setStatus('ERREUR création lecteur : ' + err); }
   };
+  // sécurité : si l'API est là mais n'a pas appelé le hook (ordre de chargement), on force
+  let apiWait = 0;
+  const apiTimer = setInterval(() => {
+    apiWait++;
+    if (ytCreated) { clearInterval(apiTimer); return; }
+    if (window.YT && typeof YT.Player === 'function') { clearInterval(apiTimer); window.onYouTubeIframeAPIReady(); return; }
+    if (window.YT && typeof YT.ready === 'function') { YT.ready(window.onYouTubeIframeAPIReady); }
+    if (apiWait === 10) setStatus('API YouTube toujours absente après 5 s (script bloqué ?)');
+    if (apiWait > 60) clearInterval(apiTimer);
+  }, 500);
 
   // ---------------------------------------------------------------- HTML5 direct
   vid.addEventListener('playing', () => { if (current) send('playing', { uid: current.uid }); });
