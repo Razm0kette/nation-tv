@@ -21,6 +21,9 @@
     try { if (window.parent !== window) window.parent.postMessage(Object.assign({ nm: true, event }, data || {}), '*'); } catch (e) {}
   };
   const showIdle = (on) => { idle.style.display = on ? 'flex' : 'none'; };
+  const statusEl = document.getElementById('status');
+  const setStatus = (t) => { if (statusEl) statusEl.textContent = t; };
+  setStatus('page chargée, attente API YouTube…');
 
   // ---------------------------------------------------------------- YouTube
   window.onYouTubeIframeAPIReady = function () {
@@ -32,8 +35,10 @@
         modestbranding: 1, playsinline: 1, origin: location.origin, widget_referrer: location.href,
       },
       events: {
-        onReady: () => { ytReady = true; applyVolume(); if (pendingPlay) { const p = pendingPlay; pendingPlay = null; play(p); } },
+        onReady: () => { ytReady = true; setStatus('API YouTube prête'); applyVolume(); if (pendingPlay) { const p = pendingPlay; pendingPlay = null; play(p); } },
         onStateChange: (e) => {
+          const names = { '-1': 'non démarré', 0: 'terminé', 1: 'lecture', 2: 'pause', 3: 'chargement', 5: 'prêt (cued)' };
+          setStatus('YouTube : ' + (names[e.data] || e.data) + (current ? ' — ' + current.title : ''));
           if (!current || mode !== 'youtube') return;
           if (e.data === YT.PlayerState.ENDED) send('ended', { uid: current.uid });
           if (e.data === YT.PlayerState.PLAYING) {
@@ -47,6 +52,7 @@
           const reasons = { 2: 'lien invalide', 5: 'erreur lecteur', 100: 'vidéo introuvable',
             101: 'intégration refusée par la chaîne', 150: 'intégration refusée par la chaîne',
             153: 'Referer invalide — héberge player.html en https (voir Config.PlayerUrl)' };
+          setStatus('ERREUR YouTube ' + e.data + ' : ' + (reasons[e.data] || ''));
           send('error', { uid: current.uid, reason: reasons[e.data] || ('code ' + e.data) });
         },
       },
@@ -86,9 +92,12 @@
       mode = 'youtube';
       vid.pause(); vid.style.display = 'none';
       document.getElementById('yt').style.display = 'block';
+      try { yt.mute(); } catch (e) {}
+      setStatus('chargement de ' + current.videoId + '…');
       yt.loadVideoById({ videoId: current.videoId, startSeconds: Math.max(0, msg.pos || 0) });
       applyVolume();
       if (msg.paused) setTimeout(() => { try { yt.pauseVideo(); } catch (e) {} }, 400);
+      else kick(current.uid);
     } else {
       mode = 'direct';
       if (yt && ytReady) { try { yt.stopVideo(); } catch (e) {} }
@@ -99,6 +108,19 @@
       applyVolume();
       if (msg.paused) vid.pause(); else vid.play().catch(() => {});
     }
+  }
+
+  // relance tant que YouTube n'est pas en lecture (autoplay capricieux)
+  function kick(uid) {
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if (!current || current.uid !== uid || mode !== 'youtube' || !ytReady || tries > 12) { clearInterval(t); return; }
+      let st = -2; try { st = yt.getPlayerState(); } catch (e) {}
+      if (st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING) { clearInterval(t); return; }
+      try { yt.mute(); yt.playVideo(); } catch (e) {}
+      setStatus('relance ' + tries + ' (état ' + st + ')');
+    }, 1000);
   }
 
   function sync(msg) {
@@ -121,12 +143,13 @@
     const msg = e.data;
     if (!msg || !msg.action) return;
     switch (msg.action) {
-      case 'play':   play(msg); break;
+      case 'play':   if (!current || !msg.item || current.uid !== msg.item.uid) setStatus('ordre de lecture reçu'); play(msg); break;
       case 'sync':   sync(msg); break;
       case 'stop':   stopAll(); break;
       case 'volume': volume = msg.volume || 0; applyVolume(); break;
     }
   });
 
+  setStatus('page chargée, attente API YouTube…');
   send('ready', {});
 })();

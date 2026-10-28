@@ -11,9 +11,12 @@
   #idle { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
           background:radial-gradient(ellipse at center, #1c3a35 0%, #0a1412 70%); color:#be935b;
           font:600 64px/1 Georgia, serif; letter-spacing:.2em; }
+  #status { position:absolute; left:10px; top:8px; z-index:9; font:600 18px/1.2 Arial, sans-serif; color:#5fd3dd;
+            text-shadow:0 0 4px #000, 0 0 8px #000; pointer-events:none; max-width:95%; }
 </style>
 </head>
 <body>
+  <div id="status"></div>
   <div id="idle"><span>NATION TV</span></div>
   <div id="yt"></div>
   <video id="vid" playsinline crossorigin="anonymous"></video>
