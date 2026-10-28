@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Nation Media Player</title>
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
+  #yt, #vid { position:absolute; inset:0; width:100%; height:100%; border:0; background:#000; }
+  #vid { object-fit:cover; display:none; }
+  #idle { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          background:radial-gradient(ellipse at center, #1c3a35 0%, #0a1412 70%); color:#be935b;
+          font:600 64px/1 Georgia, serif; letter-spacing:.2em; }
+</style>
+</head>
+<body>
+  <div id="idle"><span>NATION TV</span></div>
+  <div id="yt"></div>
+  <video id="vid" playsinline crossorigin="anonymous"></video>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="player.js"></script>
+</body>
+</html>
