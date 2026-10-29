@@ -78,7 +78,7 @@
   // ---------------------------------------------------------------- HTML5 direct
   vid.addEventListener('playing', () => { if (current) send('playing', { uid: current.uid }); });
   vid.addEventListener('ended', () => { if (current && mode === 'direct') send('ended', { uid: current.uid }); });
-  vid.addEventListener('error', () => { if (current && mode === 'direct') send('error', { uid: current.uid, reason: 'lien non lisible' }); });
+  vid.addEventListener('error', () => { setStatus('erreur vidéo ' + (vid.error && vid.error.code)); if (current && mode === 'direct') send('error', { uid: current.uid, reason: 'lien non lisible' }); });
   vid.addEventListener('loadedmetadata', () => {
     if (current && mode === 'direct' && isFinite(vid.duration) && vid.duration > 0) send('duration', { uid: current.uid, duration: vid.duration });
   });
@@ -119,10 +119,18 @@
       if (yt && ytReady) { try { yt.stopVideo(); } catch (e) {} }
       document.getElementById('yt').style.display = 'none';
       vid.style.display = KIND === 'tv' ? 'block' : 'none';
+      vid.muted = true;                       // le son vient de xsound
       vid.src = current.video || current.url;
-      vid.currentTime = Math.max(0, msg.pos || 0);
+      setStatus('chargement vidéo directe…');
+      const startAt = Math.max(0, msg.pos || 0);
+      const onMeta = () => {
+        vid.removeEventListener('loadedmetadata', onMeta);
+        try { vid.currentTime = startAt; } catch (e) {}
+        if (msg.paused) vid.pause(); else vid.play().catch((e) => setStatus('play refusé : ' + e));
+      };
+      vid.addEventListener('loadedmetadata', onMeta);
+      vid.load();
       applyVolume();
-      if (msg.paused) vid.pause(); else vid.play().catch(() => {});
     }
   }
 
@@ -166,6 +174,6 @@
     }
   });
 
-  setStatus('page chargée, attente API YouTube…');
+  setStatus('v1.5.1 — page chargée, attente API YouTube…');
   send('ready', {});
 })();
