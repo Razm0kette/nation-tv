@@ -21,7 +21,7 @@
     try { if (window.parent !== window) window.parent.postMessage(Object.assign({ nm: true, event }, data || {}), '*'); } catch (e) {}
   };
   const showIdle = (on) => { idle.style.display = on ? 'flex' : 'none'; };
-  const statusEl = document.getElementById('status');
+  const statusEl = params.get('debug') ? document.getElementById('status') : null;
   const setStatus = (t) => { if (statusEl) statusEl.textContent = t; };
   setStatus('page chargée, attente API YouTube…');
 
@@ -119,7 +119,7 @@
       if (yt && ytReady) { try { yt.stopVideo(); } catch (e) {} }
       document.getElementById('yt').style.display = 'none';
       vid.style.display = KIND === 'tv' ? 'block' : 'none';
-      vid.src = current.url;
+      vid.src = current.video || current.url;
       vid.currentTime = Math.max(0, msg.pos || 0);
       applyVolume();
       if (msg.paused) vid.pause(); else vid.play().catch(() => {});
