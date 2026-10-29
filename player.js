@@ -85,7 +85,7 @@
 
   // ---------------------------------------------------------------- commandes
   function applyVolume() {
-    const v = 0; // le son passe par xsound : l'écran est toujours muet
+    const v = (mode === 'direct') ? Math.max(0, Math.min(100, volume)) : 0;   // YouTube embed = muet (xsound), direct = son ici
     if (yt && ytReady) { try { if (v <= 0) yt.mute(); else { yt.unMute(); yt.setVolume(v); } } catch (e) {} }
     vid.volume = v / 100; vid.muted = v <= 0;
   }
@@ -119,7 +119,7 @@
       if (yt && ytReady) { try { yt.stopVideo(); } catch (e) {} }
       document.getElementById('yt').style.display = 'none';
       vid.style.display = KIND === 'tv' ? 'block' : 'none';
-      vid.muted = true;                       // le son vient de xsound
+      vid.muted = false;
       vid.src = current.video || current.url;
       setStatus('chargement vidéo directe…');
       const startAt = Math.max(0, msg.pos || 0);

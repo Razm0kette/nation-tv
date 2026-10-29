@@ -114,12 +114,12 @@ const server = http.createServer(async (req, res) => {
       const base = PUBLIC || `http://${req.headers.host}`;
       return send(res, 200, {
         videoId: id, title: i.title, author: i.author, duration: i.duration, thumb: i.thumb,
-        audio: `${base}/stream/${id}/audio?token=${TOKEN}`,
-        video: `${base}/stream/${id}/video?token=${TOKEN}`,
+        audio: `${base}/stream/${id}/audio.m4a?token=${TOKEN}`,
+        video: `${base}/stream/${id}/video.mp4?token=${TOKEN}`,
       });
     }
 
-    const m = u.pathname.match(/^\/stream\/([A-Za-z0-9_-]{11})\/(audio|video)$/);
+    const m = u.pathname.match(/^\/stream\/([A-Za-z0-9_-]{11})\/(audio|video)(?:\.(?:m4a|mp4))?$/);
     if (m) {
       const [, id, kind] = m;
       const s = await getStream(id, kind);
