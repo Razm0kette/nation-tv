@@ -15,7 +15,7 @@ const YTDLP = process.env.YTDLP || '/usr/local/bin/yt-dlp';
 
 const FORMATS = {
   video: '18/best[ext=mp4][height<=480]/best[height<=480]/best', // mp4 muxé (image + son) pour les télés
-  audio: 'bestaudio[ext=m4a]/bestaudio/best',                     // audio seul pour voitures / enceintes
+  audio: '140/bestaudio[ext=m4a]/bestaudio/best',                 // m4a (itag 140) : lu par xsound et les navigateurs
 };
 
 const cache = new Map();   // id|kind -> { url, mime, exp }
@@ -70,12 +70,17 @@ function send(res, code, obj) {
 }
 
 // relais du flux googlevideo vers le joueur (avec Range pour pouvoir avancer / se resynchroniser)
-function proxy(res, target, range, retry) {
+function proxy(res, target, range, retry, hops) {
+  hops = hops || 0;
   const u = new URL(target);
   const headers = { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' };
   if (range) headers.Range = range;
   const req = (u.protocol === 'https:' ? https : http).get(u, { headers, family: 4 }, (up) => {
     if (up.statusCode === 403 && !retry) { up.resume(); return res.emit('nm-refresh'); }
+    if ([301, 302, 303, 307, 308].includes(up.statusCode) && up.headers.location && hops < 5) {
+      up.resume();
+      return proxy(res, new URL(up.headers.location, u).toString(), range, retry, hops + 1);
+    }
     const h = {
       'Access-Control-Allow-Origin': '*',
       'Accept-Ranges': 'bytes',
