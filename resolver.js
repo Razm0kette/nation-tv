@@ -25,7 +25,8 @@ function log(...a) { console.log(new Date().toISOString(), ...a); }
 
 function ytdlp(args) {
   return new Promise((resolve, reject) => {
-    const full = ['--no-playlist', '--no-warnings', '-q'];
+    const full = ['--no-playlist', '--no-warnings', '-q', '-4',
+      '--extractor-args', 'youtube:player_client=tv,web_safari,default'];
     if (fs.existsSync(COOKIES)) full.push('--cookies', COOKIES);
     execFile(YTDLP, full.concat(args), { timeout: 60000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) return reject(new Error((stderr || err.message || '').trim().split('\n').pop()));
@@ -42,10 +43,11 @@ function videoId(u) {
 async function getInfo(id) {
   const c = info.get(id);
   if (c && c.exp > Date.now()) return c;
-  const out = await ytdlp(['-J', `https://www.youtube.com/watch?v=${id}`]);
-  const j = JSON.parse(out);
-  const d = { title: j.title || 'Vidéo YouTube', author: j.uploader || j.channel || '', duration: j.duration || 0,
-    live: !!j.is_live, thumb: j.thumbnail || `https://img.youtube.com/vi/${id}/mqdefault.jpg`, exp: Date.now() + 6 * 3600e3 };
+  const out = await ytdlp(['--print', '%(title)s\t%(uploader,channel)s\t%(duration)s\t%(is_live)s\t%(thumbnail)s',
+    '-f', FORMATS.audio, `https://www.youtube.com/watch?v=${id}`]);
+  const [title, author, duration, isLive, thumb] = out.split('\t');
+  const d = { title: title || 'Vidéo YouTube', author: author || '', duration: parseFloat(duration) || 0,
+    live: isLive === 'True', thumb: (thumb && thumb !== 'NA') ? thumb : `https://img.youtube.com/vi/${id}/mqdefault.jpg`, exp: Date.now() + 6 * 3600e3 };
   info.set(id, d);
   return d;
 }
@@ -72,7 +74,7 @@ function proxy(res, target, range, retry) {
   const u = new URL(target);
   const headers = { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' };
   if (range) headers.Range = range;
-  const req = (u.protocol === 'https:' ? https : http).get(u, { headers }, (up) => {
+  const req = (u.protocol === 'https:' ? https : http).get(u, { headers, family: 4 }, (up) => {
     if (up.statusCode === 403 && !retry) { up.resume(); return res.emit('nm-refresh'); }
     const h = {
       'Access-Control-Allow-Origin': '*',
